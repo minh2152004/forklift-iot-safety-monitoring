@@ -47,7 +47,7 @@ MQTT topics used in the code: `forklift/data` (sensor telemetry), `forklift/aler
 firmware/
   sensor-block/       ESP32: HX711 + MPU6050 + TinyML + MQTT (Arduino)
   camera-esp32cam/    ESP32-CAM: captures frames and POSTs them to the server (Arduino)
-  gateway-esp32/      ESP32 + A7680C 4G router and BLE scanner (ESP-IDF)
+  esp32-router/      ESP32 + A7680C 4G router and BLE scanner (ESP-IDF)
 platform/
   docker-compose.yaml Node-RED, InfluxDB, Node.js API, Flask/YOLO, Nginx, ngrok
   python-server/      Flask image-processing service (YOLOv8n)
@@ -63,7 +63,7 @@ docs/                 Original setup guides (Vietnamese)
 |---|---|
 | Sensor block | ESP32, HX711 + load cell, MPU6050, buzzer |
 | Camera block | ESP32-CAM |
-| 4G gateway | ESP32, SIMCom A7680C (wiring and power notes in `firmware/gateway-esp32/README.md`) |
+| 4G gateway | ESP32, SIMCom A7680C (wiring and power notes in `firmware/esp32-router/README.md`) |
 
 ## Setup
 
@@ -77,7 +77,7 @@ docs/                 Original setup guides (Vietnamese)
 
 ### 2. Gateway firmware (ESP-IDF)
 
-1. Install ESP-IDF and open `firmware/gateway-esp32` with it.
+1. Install ESP-IDF and open `firmware/esp32-router` with it.
 2. Set the Wi-Fi AP name and password in `main/wifi_ap.h` / `main/main.c`, and the HiveMQ settings in `main/ble_scanner.c`.
 3. Build and flash.
 
