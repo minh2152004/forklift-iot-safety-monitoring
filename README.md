@@ -54,7 +54,6 @@ platform/
   api/                Node.js API reading from InfluxDB
   web/                Dashboard (HTML, CSS, Chart.js)
   nodered/flows.json  Node-RED flows to import
-docs/                 Original setup guides (Vietnamese)
 ```
 
 ## Hardware
