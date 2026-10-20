@@ -1,0 +1,22 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "modem_4g.c"
+        "wifi_ap.c"
+        "ble_scanner.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        esp_modem
+        esp_netif
+        esp_event
+        esp_wifi
+        driver
+        esp_driver_gpio
+        nvs_flash
+        lwip
+        bt 
+        esp-tls
+    PRIV_REQUIRES
+        mqtt
+)

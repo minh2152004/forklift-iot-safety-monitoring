@@ -1,0 +1,9 @@
+## IDF Component Manager manifest
+## Run `idf.py add-dependency` or let CMake fetch automatically on first build.
+dependencies:
+  espressif/esp_modem:
+    version: ">=1.1.0"
+  idf:
+    version: ">=5.0.0"
+  espressif/mqtt:
+    version: "*"

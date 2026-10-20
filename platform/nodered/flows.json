@@ -1,0 +1,261 @@
+[
+    {
+        "id": "2f6ea7b1a9044414",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "246abe1e0e1db39e",
+        "type": "mqtt in",
+        "z": "2f6ea7b1a9044414",
+        "name": "ESP32 Data",
+        "topic": "forklift/data",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "3e2960bc37e254ce",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 280,
+        "wires": [
+            [
+                "9a8cb8490ddf10bd"
+            ]
+        ]
+    },
+    {
+        "id": "e1221c7c4d31902f",
+        "type": "function",
+        "z": "2f6ea7b1a9044414",
+        "name": "SlackBot Alert",
+        "func": "let status = msg.payload.status;\n\nif (status === \"overload\" || status === \"unbalance\") {\n\n    msg.topic = \"chat.meMessage\"\n\n    msg.payload = {\n        channel: \"esp32\",\n        text: `🚨 ALERT: Device status is ${status.toUpperCase()}!`\n    }\n    return msg;\n}\nif (msg.payload === \"DANGER\") {\n    msg.topic = \"chat.meMessage\";\n    msg.payload = {\n        channel: \"esp32\",\n        text: \"🚨 Human detected, collision inbound\"\n    };\n    return msg;\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 340,
+        "wires": [
+            [
+                "1b4e8176ac349f10"
+            ]
+        ]
+    },
+    {
+        "id": "8c8ee992b6dd2342",
+        "type": "influxdb out",
+        "z": "2f6ea7b1a9044414",
+        "influxdb": "d70ff65f78d95fa3",
+        "name": "Influx Cloud",
+        "measurement": "iotsensor",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "",
+        "retentionPolicyV18Flux": "",
+        "org": "Work",
+        "bucket": "Weight",
+        "x": 590,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "1b4e8176ac349f10",
+        "type": "slack-web-out",
+        "z": "2f6ea7b1a9044414",
+        "client": "6118e75e576ec24a",
+        "name": "AlertBot",
+        "x": 760,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9a8cb8490ddf10bd",
+        "type": "function",
+        "z": "2f6ea7b1a9044414",
+        "name": "Payload Parser",
+        "func": "// Parse incoming JSON from forklift/data\nlet data;\ntry {\n    data = (typeof msg.payload === 'string')\n        ? JSON.parse(msg.payload)\n        : msg.payload;\n} catch (e) {\n    node.error(\"Invalid JSON: \" + msg.payload, msg);\n    return null;\n}\n\nconst weight = parseFloat(data.weight_kg);\nconst tilt = parseFloat(data.tilt);\nconst status = data.status;\n\n// --- Output 1: data for InfluxDB ---\nconst dataMsg = {\n    payload: {\n        weight_kg: weight,\n        tilt: parseFloat(tilt.toFixed(2)),\n        status: status\n    }\n};\n\n// --- Output 2: status for Slack alert check ---\nconst statusMsg = {\n    payload: { status: status }\n};\n\nreturn [dataMsg, statusMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 280,
+        "wires": [
+            [
+                "8c8ee992b6dd2342",
+                "c01dc7bdcead7e6e"
+            ],
+            [
+                "e1221c7c4d31902f"
+            ]
+        ]
+    },
+    {
+        "id": "c01dc7bdcead7e6e",
+        "type": "debug",
+        "z": "2f6ea7b1a9044414",
+        "name": "Data output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 530,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "3f4da9fd5037dffe",
+        "type": "mqtt in",
+        "z": "2f6ea7b1a9044414",
+        "name": "ESP32 Location",
+        "topic": "router/location",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "3e2960bc37e254ce",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 220,
+        "wires": [
+            [
+                "22f5517e348478f5"
+            ]
+        ]
+    },
+    {
+        "id": "22f5517e348478f5",
+        "type": "function",
+        "z": "2f6ea7b1a9044414",
+        "name": "Payload Parser",
+        "func": "let data;\ntry {\n    data = (typeof msg.payload === 'string')\n        ? JSON.parse(msg.payload)\n        : msg.payload;\n} catch (e) {\n    node.error(\"Invalid location JSON: \" + msg.payload, msg);\n    return null;\n}\n\nconst zone = data.zone || \"unknown\";\n\nconst fields = { zone_text: zone };\n\nif (data.rssi !== undefined && data.rssi !== null) {\n    const rssi = parseInt(data.rssi);\n    if (!isNaN(rssi)) {\n        fields.rssi = rssi;\n    }\n}\n\nif (data.minor !== undefined && data.minor !== null) {\n    const minor = parseInt(data.minor);\n    if (!isNaN(minor)) {\n        fields.minor = minor;\n    }\n}\n\nmsg.payload = [\n    fields,\n    { zone: zone }   // tag\n];\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 220,
+        "wires": [
+            [
+                "f26849492dba49f7"
+            ]
+        ]
+    },
+    {
+        "id": "f26849492dba49f7",
+        "type": "influxdb out",
+        "z": "2f6ea7b1a9044414",
+        "influxdb": "d70ff65f78d95fa3",
+        "name": "Influx Cloud",
+        "measurement": "location",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "",
+        "retentionPolicyV18Flux": "",
+        "org": "Work",
+        "bucket": "Weight",
+        "x": 590,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "7134550122f4ce18",
+        "type": "mqtt in",
+        "z": "2f6ea7b1a9044414",
+        "name": "Human Detection Alert",
+        "topic": "forklift/alert",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "3e2960bc37e254ce",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 300,
+        "y": 360,
+        "wires": [
+            [
+                "e1221c7c4d31902f"
+            ]
+        ]
+    },
+    {
+        "id": "3e2960bc37e254ce",
+        "type": "mqtt-broker",
+        "name": "Weight",
+        "broker": "YOUR-CLUSTER-ID.s1.eu.hivemq.cloud",
+        "port": "8883",
+        "tls": "",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "d70ff65f78d95fa3",
+        "type": "influxdb",
+        "hostname": "140.245.106.65",
+        "port": 8086,
+        "protocol": "http",
+        "database": "database",
+        "name": "IoT databse",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://influxdb:8086",
+        "timeout": 10,
+        "rejectUnauthorized": true
+    },
+    {
+        "id": "6118e75e576ec24a",
+        "type": "slack-config",
+        "name": "AlertBot"
+    },
+    {
+        "id": "102050814e881607",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-influxdb": "0.7.0",
+            "node-red-contrib-slack": "2.1.0"
+        }
+    }
+]

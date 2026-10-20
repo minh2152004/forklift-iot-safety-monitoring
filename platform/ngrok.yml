@@ -1,0 +1,7 @@
+version: 3
+tunnels:
+  mytunnel:
+    proto: http
+    addr: python-ai:5001
+    schemes:
+      - http

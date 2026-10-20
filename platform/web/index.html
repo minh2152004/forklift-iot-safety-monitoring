@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forklift Monitor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- Top bar -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo-mark">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect x="2" y="2" width="10" height="10" rx="2" fill="var(--accent)"/>
+        <rect x="16" y="2" width="10" height="10" rx="2" fill="var(--accent)" opacity="0.5"/>
+        <rect x="2" y="16" width="10" height="10" rx="2" fill="var(--accent)" opacity="0.5"/>
+        <rect x="16" y="16" width="10" height="10" rx="2" fill="var(--accent)" opacity="0.2"/>
+      </svg>
+    </div>
+    <div>
+      <h1 class="topbar-title">Forklift Monitor</h1>
+      <span class="topbar-subtitle">ESP32 IoT Safety System</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-badge" id="statusBadge">
+      <span class="status-dot" id="statusLight"></span>
+      <span class="status-text" id="statusText">Connecting</span>
+    </div>
+    <div class="live-indicator">
+      <span class="live-dot"></span>
+      LIVE
+    </div>
+  </div>
+</header>
+
+<!-- Tab navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="dashboard">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+    </svg>
+    Dashboard
+  </button>
+  <button class="tab-btn" data-tab="camera">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+    </svg>
+    Camera
+  </button>
+  <button class="tab-btn" data-tab="location">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+    </svg>
+    Location
+  </button>
+</div>
+
+<!-- Dashboard panel -->
+<div id="dashboard-panel">
+
+  <section class="metric-cards">
+    <button class="metric-card active" data-metric="weight_kg" id="card-weight_kg">
+      <div class="metric-card-icon" style="--card-color: #3b82f6;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 18V6"/><path d="M18 18V6"/><path d="M6 12H18"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/>
+        </svg>
+      </div>
+      <div class="metric-card-body">
+        <span class="metric-card-label">Weight</span>
+        <div class="metric-card-reading">
+          <span class="metric-card-value" id="liveVal-weight_kg">--</span>
+          <span class="metric-card-unit">kg</span>
+        </div>
+      </div>
+      <div class="metric-card-indicator"></div>
+    </button>
+
+    <button class="metric-card" data-metric="tilt" id="card-tilt">
+      <div class="metric-card-icon" style="--card-color: #f97316;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20"/><path d="M5 9l7-7 7 7"/>
+        </svg>
+      </div>
+      <div class="metric-card-body">
+        <span class="metric-card-label">Tilt</span>
+        <div class="metric-card-reading">
+          <span class="metric-card-value" id="liveVal-tilt">--</span>
+          <span class="metric-card-unit">°</span>
+        </div>
+      </div>
+      <div class="metric-card-indicator"></div>
+    </button>
+  </section>
+
+  <section class="chart-panel">
+    <div class="chart-toolbar">
+      <div class="chart-toolbar-left">
+        <h2 class="chart-title" id="chartTitle">Weight (kg)</h2>
+        <span class="chart-subtitle" id="chartSubtitle">Real-time weight readings</span>
+      </div>
+      <div class="chart-toolbar-right">
+        <div class="btn-group" id="timeRangeGroup">
+          <button class="btn-pill active" data-range="15">15m</button>
+          <button class="btn-pill" data-range="30">30m</button>
+          <button class="btn-pill" data-range="60">1h</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Min / Max only (Avg + Points removed) -->
+    <div class="stats-strip">
+      <div class="stats-strip-item">
+        <span class="stats-strip-label">Min</span>
+        <span class="stats-strip-value" id="statMinVal">--</span>
+      </div>
+      <div class="stats-strip-item">
+        <span class="stats-strip-label">Max</span>
+        <span class="stats-strip-value" id="statMaxVal">--</span>
+      </div>
+    </div>
+
+    <div class="chart-canvas-wrap">
+      <canvas id="sensorChart"></canvas>
+    </div>
+  </section>
+</div>
+
+<!-- Camera panel - no Refresh button, no Auto-refresh toggle -->
+<section class="chart-panel" id="camera-panel" style="display:none;">
+  <div class="chart-toolbar">
+    <div class="chart-toolbar-left">
+      <h2 class="chart-title">Camera Feed</h2>
+      <span class="chart-subtitle">ESP32-CAM with YOLO detection overlay</span>
+    </div>
+    <div class="chart-toolbar-right">
+      <span style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">Auto-refresh every 2s</span>
+    </div>
+  </div>
+
+  <div class="cam-status-bar">
+    <span id="cameraStatus" class="cam-status neutral">Waiting for image</span>
+    <span id="cameraTimestamp" style="font-size:12px; color:var(--text-muted); font-family:var(--font-mono);"></span>
+  </div>
+
+  <div class="cam-frame">
+    <img id="cameraImage" style="display:none; width:100%; border-radius:8px;" alt="Detection frame"/>
+    <div id="cameraPlaceholder" class="cam-placeholder">
+      Waiting for camera stream
+    </div>
+  </div>
+</section>
+
+<!-- Location panel - no emojis -->
+<section class="chart-panel" id="location-panel" style="display:none;">
+  <div class="chart-toolbar">
+    <div class="chart-toolbar-left">
+      <h2 class="chart-title">Indoor Location</h2>
+      <span class="chart-subtitle">BLE beacon zone tracking</span>
+    </div>
+    <div class="chart-toolbar-right">
+      <span id="locationStatus" class="cam-status neutral">Polling</span>
+    </div>
+  </div>
+
+  <div class="cam-frame" style="flex-direction: column; padding: 32px; min-height: 280px;">
+    <div style="text-align:center;">
+      <div id="zoneBadge" style="font-size: 36px; font-weight: 700; color: var(--accent); margin-bottom: 8px; letter-spacing: -0.5px;">
+        Waiting
+      </div>
+      <div id="zoneSub" style="color: var(--text-muted); font-family: var(--font-mono); font-size: 13px;">
+        no signal yet
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-strip" style="margin-top: 16px;">
+    <div class="stats-strip-item">
+      <span class="stats-strip-label">RSSI</span>
+      <span class="stats-strip-value" id="zoneRssiVal">--</span>
+    </div>
+    <div class="stats-strip-item">
+      <span class="stats-strip-label">Beacon ID</span>
+      <span class="stats-strip-value" id="zoneMinorVal">--</span>
+    </div>
+    <div class="stats-strip-item">
+      <span class="stats-strip-label">Quality</span>
+      <span class="stats-strip-value" id="zoneQualityVal">--</span>
+    </div>
+    <div class="stats-strip-item">
+      <span class="stats-strip-label">Updated</span>
+      <span class="stats-strip-value" id="zoneUpdatedVal">--</span>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <span>Forklift Safety Monitor</span>
+  <span class="footer-sep">·</span>
+  <span id="lastUpdated">Last updated: --</span>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

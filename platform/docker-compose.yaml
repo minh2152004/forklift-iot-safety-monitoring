@@ -1,0 +1,104 @@
+version: "3.9"
+
+services:
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
+    restart: unless-stopped
+    ports:
+      - "4040:4040"
+    env_file: .env
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    command: start --config /etc/ngrok.yml mytunnel
+    depends_on:
+      - python-ai
+      - web
+    networks:
+      - ai_net
+      - frontend_net
+
+  python-ai:
+    build: ./python-server
+    container_name: python-ai
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - influxdb
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ai_net
+      - frontend_net
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    restart: unless-stopped
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    env_file: .env
+    networks:
+      - data_net
+
+  nodered:
+    image: nodered/node-red:latest
+    container_name: node-red
+    restart: unless-stopped
+    ports:
+      - "1880:1880"
+    volumes:
+      - nodered_data:/data
+    depends_on:
+      - influxdb
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - data_net
+
+  api:
+    image: node:20
+    container_name: influx-api
+    working_dir: /app
+    volumes:
+      - ./api:/app
+    command: sh -c "npm install && node server.js"
+    depends_on:
+      - influxdb
+    env_file: .env
+    networks:
+      - data_net
+      - frontend_net
+
+  web:
+    image: nginx:alpine
+    container_name: dashboard-web
+    ports:
+      - "80:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - python-ai
+    networks:
+      - frontend_net
+
+networks:
+  ai_net:
+    driver: bridge
+  data_net:
+    driver: bridge
+  frontend_net:
+    driver: bridge
+
+volumes:
+  influxdb_data:
+  influxdb_config:
+  nodered_data:

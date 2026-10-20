@@ -1,0 +1,16 @@
+# Secrets / local config
+.env
+**/config.h
+
+# ESP-IDF
+build/
+managed_components/
+sdkconfig
+sdkconfig.old
+.vscode/
+
+# Node / Python
+node_modules/
+__pycache__/
+*.pyc
+.venv/
